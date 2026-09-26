@@ -26,6 +26,26 @@ function validateSnapshot(input) {
   return {camera,entities};
 }
 
+function validateRecording(input) {
+  if(input?.kind!=='recording'||!Array.isArray(input.frames)||input.frames.length<2||input.frames.length>600)
+    throw new Error('Recording needs 2–600 frames and kind recording.');
+  let previous=-1;
+  const frames=input.frames.map((frame,i)=>{
+    if(typeof frame?.time!=='number'||!Number.isFinite(frame.time)||frame.time<=previous||frame.time>3600||(i===0&&frame.time!==0))
+      throw new Error(`Frame ${i}: times must start at zero and strictly increase, up to 3600 seconds.`);
+    previous=frame.time;
+    return {time:frame.time,...validateSnapshot({schemaVersion:input.schemaVersion,units:input.units,coordinates:input.coordinates,camera:frame.camera,entities:frame.entities})};
+  });
+  return {frames,duration:frames.at(-1).time};
+}
+
+// Hold the latest recorded frame: never invent intermediate entity or camera state.
+function frameAt(recording,time) {
+  let lo=0,hi=recording.frames.length-1;
+  while(lo<hi){const mid=Math.ceil((lo+hi)/2);if(recording.frames[mid].time<=time)lo=mid;else hi=mid-1;}
+  return recording.frames[lo];
+}
+
 function project(point, camera, width, height) {
   const dx=point.x-camera.position.x, dy=point.y-camera.position.y, dz=point.z-camera.position.z;
   const cy=Math.cos(camera.yaw), sy=Math.sin(camera.yaw);
@@ -48,43 +68,65 @@ const SampleProvider={snapshot(t){
   return {camera:{position:{x:0,y:1.7,z:0},yaw:0,pitch:0,fov:75},entities};
 }};
 
-if(typeof module!=='undefined') module.exports={project,SampleProvider,validateSnapshot};
+function sampleRecording() {
+  return {schemaVersion:1,units:'metres',coordinates:'y-up-z-forward',kind:'recording',frames:Array.from({length:101},(_,i)=>{
+    const t=i/10,scene=SampleProvider.snapshot(t);
+    scene.camera.position.x=Math.sin(t*.6)*2;scene.camera.yaw=Math.sin(t*.4)*.15;
+    scene.camera.roll=Math.sin(t*.5)*.04;
+    return {time:t,...scene};
+  })};
+}
+
+if(typeof module!=='undefined') module.exports={project,SampleProvider,validateSnapshot,validateRecording,frameAt,sampleRecording};
 if(typeof document!=='undefined') {
   const canvas=document.getElementById('scene'),ctx=canvas.getContext('2d');
   const controls=Object.fromEntries(['boxes','bones','distance','friends','fov','fovLabel','pause'].map(id=>[id,document.getElementById(id)]));
   let paused=false,time=0,last=null;
-  let imported=null,loadId=0;
+  let imported=null,recording=null,playhead=0,loadId=0;
+  const timeline=document.getElementById('timeline'),speed=document.getElementById('speed'),clock=document.getElementById('clock');
+  function resetPlayback(){playhead=0;paused=false;last=null;controls.pause.textContent='Pause';timeline.value=0;timeline.disabled=!recording;speed.disabled=!recording;timeline.max=recording?.duration??1;clock.textContent=recording?`0.0 / ${recording.duration.toFixed(1)} s`:'No recording loaded';}
   const source=document.getElementById('source'),error=document.getElementById('error'),fileInput=document.getElementById('snapshot');
   fileInput.onchange=async()=>{
     const id=++loadId,file=fileInput.files[0];if(!file)return;
     try {
-      if(file.size>2*1024*1024)throw new Error('Snapshot must be smaller than 2 MiB.');
-      const candidate=validateSnapshot(JSON.parse(await file.text()));
+      if(file.size>16*1024*1024)throw new Error('File must be smaller than 16 MiB.');
+      const data=JSON.parse(await file.text()),isRecording=data?.kind==='recording';
+      const candidate=isRecording?validateRecording(data):validateSnapshot(data);
       if(id!==loadId)return;
-      imported=candidate;error.textContent='';
-      source.textContent=`IMPORTED SNAPSHOT · ${file.name} · ${candidate.entities.length} entities · No live connection`;
-      controls.fov.disabled=true;controls.pause.disabled=true;
+      recording=isRecording?candidate:null;imported=isRecording?null:candidate;error.textContent='';resetPlayback();
+      source.textContent=`${isRecording?'RECORDED FILE':'IMPORTED SNAPSHOT'} · ${file.name} · No live connection`;
+      controls.fov.disabled=true;controls.pause.disabled=!isRecording;
     } catch(e){if(id===loadId)error.textContent=`Import failed: ${e.message} Current scene retained.`;}
     finally{if(id===loadId)fileInput.value='';}
   };
   document.getElementById('sample').onclick=()=>{
-    ++loadId;imported=null;fileInput.value='';error.textContent='';
+    ++loadId;imported=null;recording=null;resetPlayback();fileInput.value='';error.textContent='';
     controls.fov.disabled=false;controls.pause.disabled=false;
     source.textContent='SAMPLE DATA · No connection to WARDOGS';
   };
+  function download(data,name){
+    const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+    const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  document.getElementById('exportRecording').onclick=()=>download(sampleRecording(),'sample-recording.json');
   document.getElementById('export').onclick=()=>{
     const snapshot={schemaVersion:1,units:'metres',coordinates:'y-up-z-forward',...SampleProvider.snapshot(time)};
     snapshot.camera.fov=Number(controls.fov.value);
-    const url=URL.createObjectURL(new Blob([JSON.stringify(snapshot,null,2)],{type:'application/json'}));
-    const a=document.createElement('a');a.href=url;a.download='sample-snapshot.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    download(snapshot,'sample-snapshot.json');
   };
-  controls.pause.onclick=()=>{paused=!paused;controls.pause.textContent=paused?'Resume':'Pause';};
+  timeline.oninput=()=>{if(recording){playhead=Number(timeline.value);paused=true;controls.pause.textContent='Resume';}};
+  controls.pause.onclick=()=>{if(recording&&playhead>=recording.duration){playhead=0;paused=false;}else paused=!paused;last=null;controls.pause.textContent=paused?'Resume':'Pause';};
   function frame(now){
-    if(last!==null&&!paused)time+=Math.min((now-last)/1000,.1);last=now;
+    const dt=last===null?0:Math.min((now-last)/1000,.1);last=now;
+    if(!paused){
+      if(recording){playhead=Math.min(recording.duration,playhead+dt*Number(speed.value));if(playhead>=recording.duration){paused=true;controls.pause.textContent='Replay';}}
+      else if(!imported)time+=dt;
+    }
+    if(recording){timeline.value=playhead;clock.textContent=`${playhead.toFixed(1)} / ${recording.duration.toFixed(1)} s`;}
     const w=canvas.clientWidth,h=canvas.clientHeight,dpr=window.devicePixelRatio||1;
     if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
     ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
-    const {camera,entities}=imported??SampleProvider.snapshot(time);if(!imported)camera.fov=Number(controls.fov.value);controls.fovLabel.textContent=`${camera.fov}°`;
+    const {camera,entities}=recording?frameAt(recording,playhead):(imported??SampleProvider.snapshot(time));if(!imported&&!recording)camera.fov=Number(controls.fov.value);controls.fovLabel.textContent=`${camera.fov}°`;
     const p=v=>project(v,camera,w,h);
     function line(a,b,color,width=1){if(!a||!b)return;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
     for(let z=5;z<=80;z+=5)line(p({x:-50,y:0,z}),p({x:50,y:0,z}),'#1d2b3d');

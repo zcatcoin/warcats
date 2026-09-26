@@ -6,10 +6,14 @@
 <style>
 *{box-sizing:border-box}body{margin:0;background:#0b1019;color:#edf2fa;font:14px system-ui}header{padding:20px 28px;border-bottom:1px solid #283346;display:flex;align-items:center;gap:20px;flex-wrap:wrap}h1{font-size:19px;margin:0}small{color:#91a3bb}aside{padding:14px 28px;display:flex;gap:22px;flex-wrap:wrap;background:#111b29}label{display:flex;align-items:center;gap:7px}input{accent-color:#55dcb4}canvas{display:block;width:100%;height:calc(100vh - 170px);min-height:320px}footer{padding:12px 28px;color:#91a3bb}button{background:#273a50;border:1px solid #45617c;border-radius:5px;color:white;padding:6px 12px;cursor:pointer}
 </style>
+<style>
+body{min-height:100vh;display:flex;flex-direction:column}canvas{height:max(320px,calc(100vh - 280px));flex:1}select{background:#273a50;color:#edf2fa;padding:5px;border:1px solid #45617c;border-radius:4px}button:disabled,input:disabled,select:disabled{opacity:.5;cursor:default}#error{color:#ff9fa4}#timeline{width:min(34vw,400px)}
+</style>
 <header><h1>ESP Rendering Lab</h1><small id="source" role="status">SAMPLE DATA · No connection to WARDOGS</small></header>
 <aside><label><input id="boxes" type="checkbox" checked>Boxes</label><label><input id="bones" type="checkbox" checked>Skeletons</label><label><input id="distance" type="checkbox" checked>Distance</label><label><input id="friends" type="checkbox" checked>Teammates</label><label>FOV <input id="fov" type="range" min="45" max="110" value="75"><span id="fovLabel">75°</span></label><button id="pause">Pause</button></aside>
-<aside><label>Load snapshot <input id="snapshot" type="file" accept=".json,application/json"></label><button id="sample">Return to sample data</button><button id="export">Export sample snapshot</button><span id="error" role="alert"></span></aside>
+<aside><label>Load JSON <input id="snapshot" type="file" accept=".json,application/json"></label><button id="sample">Return to sample data</button><button id="export">Export sample snapshot</button><button id="exportRecording">Export sample recording</button><span id="error" role="alert"></span></aside>
+<aside><label>Timeline <input id="timeline" type="range" min="0" max="1" step="0.01" value="0" disabled></label><span id="clock">No recording loaded</span><label>Speed <select id="speed" disabled><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label></aside>
 <canvas id="scene" aria-label="Players with projected skeletons, boxes and distances"></canvas>
-<footer>Green = teammate · Coral = opponent · Coordinates in metres · Imported files are static snapshots, not a live connection</footer>
+<footer>Green = teammate · Coral = opponent · Coordinates in metres · Files contain snapshots or recordings, not a live connection</footer>
 <script src="renderer.js"></script>
 </html>
