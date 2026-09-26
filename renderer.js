@@ -3,6 +3,29 @@
    Replace SampleProvider only when a documented data source is available. */
 const links = [[0,1],[1,2],[2,3],[1,4],[4,5],[5,6],[1,7],[7,8],[8,9],[3,10],[10,11],[11,12],[3,13],[13,14],[14,15]];
 
+function validateSnapshot(input) {
+  const fail=message=>{throw new Error(message);};
+  const finite=(n,label,limit=1e7)=>{
+    if(typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>limit)fail(`${label} must be a finite number within ±${limit}.`);
+    return n;
+  };
+  const vector=(v,label)=>({x:finite(v?.x,`${label}.x`),y:finite(v?.y,`${label}.y`),z:finite(v?.z,`${label}.z`)});
+  if(input?.schemaVersion!==1||input?.units!=='metres'||input?.coordinates!=='y-up-z-forward')fail('Expected schemaVersion 1, units metres and coordinates y-up-z-forward.');
+  const c=input.camera;
+  const camera={position:vector(c?.position,'camera.position'),yaw:finite(c?.yaw,'camera.yaw',Math.PI*2),pitch:finite(c?.pitch,'camera.pitch',Math.PI/2),roll:finite(c?.roll??0,'camera.roll',Math.PI*2),fov:finite(c?.fov,'camera.fov',179)};
+  if(camera.fov<1)fail('Vertical FOV must be between 1 and 179 degrees.');
+  if(!Array.isArray(input.entities)||input.entities.length>256)fail('Expected at most 256 entities.');
+  const ids=new Set();
+  const entities=input.entities.map((e,i)=>{
+    if(typeof e?.id!=='string'||!e.id.length||e.id.length>80||ids.has(e.id))fail(`Entity ${i} needs a unique ID of 1–80 characters.`);
+    ids.add(e.id);
+    if(!['friendly','enemy'].includes(e.team))fail(`Entity ${i} has an invalid team.`);
+    if(!Array.isArray(e.bones)||e.bones.length!==16)fail(`Entity ${i} needs exactly 16 world-space bones in the documented order.`);
+    return {id:e.id,team:e.team,position:vector(e.position,`entity ${i}`),bones:e.bones.map((b,j)=>vector(b,`entity ${i} bone ${j}`))};
+  });
+  return {camera,entities};
+}
+
 function project(point, camera, width, height) {
   const dx=point.x-camera.position.x, dy=point.y-camera.position.y, dz=point.z-camera.position.z;
   const cy=Math.cos(camera.yaw), sy=Math.sin(camera.yaw);
@@ -11,7 +34,8 @@ function project(point, camera, width, height) {
   const y=cp*dy-sp*z0, z=sp*dy+cp*z0;
   if(z<=0.05) return null;
   const focal=height/(2*Math.tan(camera.fov*Math.PI/360));
-  return {x:width/2+x*focal/z,y:height/2-y*focal/z};
+  const cr=Math.cos(camera.roll??0),sr=Math.sin(camera.roll??0);
+  return {x:width/2+(cr*x+sr*y)*focal/z,y:height/2-(-sr*x+cr*y)*focal/z};
 }
 
 const SampleProvider={snapshot(t){
@@ -24,18 +48,43 @@ const SampleProvider={snapshot(t){
   return {camera:{position:{x:0,y:1.7,z:0},yaw:0,pitch:0,fov:75},entities};
 }};
 
-if(typeof module!=='undefined') module.exports={project,SampleProvider};
+if(typeof module!=='undefined') module.exports={project,SampleProvider,validateSnapshot};
 if(typeof document!=='undefined') {
   const canvas=document.getElementById('scene'),ctx=canvas.getContext('2d');
   const controls=Object.fromEntries(['boxes','bones','distance','friends','fov','fovLabel','pause'].map(id=>[id,document.getElementById(id)]));
   let paused=false,time=0,last=null;
+  let imported=null,loadId=0;
+  const source=document.getElementById('source'),error=document.getElementById('error'),fileInput=document.getElementById('snapshot');
+  fileInput.onchange=async()=>{
+    const id=++loadId,file=fileInput.files[0];if(!file)return;
+    try {
+      if(file.size>2*1024*1024)throw new Error('Snapshot must be smaller than 2 MiB.');
+      const candidate=validateSnapshot(JSON.parse(await file.text()));
+      if(id!==loadId)return;
+      imported=candidate;error.textContent='';
+      source.textContent=`IMPORTED SNAPSHOT · ${file.name} · ${candidate.entities.length} entities · No live connection`;
+      controls.fov.disabled=true;controls.pause.disabled=true;
+    } catch(e){if(id===loadId)error.textContent=`Import failed: ${e.message} Current scene retained.`;}
+    finally{if(id===loadId)fileInput.value='';}
+  };
+  document.getElementById('sample').onclick=()=>{
+    ++loadId;imported=null;fileInput.value='';error.textContent='';
+    controls.fov.disabled=false;controls.pause.disabled=false;
+    source.textContent='SAMPLE DATA · No connection to WARDOGS';
+  };
+  document.getElementById('export').onclick=()=>{
+    const snapshot={schemaVersion:1,units:'metres',coordinates:'y-up-z-forward',...SampleProvider.snapshot(time)};
+    snapshot.camera.fov=Number(controls.fov.value);
+    const url=URL.createObjectURL(new Blob([JSON.stringify(snapshot,null,2)],{type:'application/json'}));
+    const a=document.createElement('a');a.href=url;a.download='sample-snapshot.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
   controls.pause.onclick=()=>{paused=!paused;controls.pause.textContent=paused?'Resume':'Pause';};
   function frame(now){
     if(last!==null&&!paused)time+=Math.min((now-last)/1000,.1);last=now;
     const w=canvas.clientWidth,h=canvas.clientHeight,dpr=window.devicePixelRatio||1;
     if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
     ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
-    const {camera,entities}=SampleProvider.snapshot(time);camera.fov=Number(controls.fov.value);controls.fovLabel.textContent=`${camera.fov}°`;
+    const {camera,entities}=imported??SampleProvider.snapshot(time);if(!imported)camera.fov=Number(controls.fov.value);controls.fovLabel.textContent=`${camera.fov}°`;
     const p=v=>project(v,camera,w,h);
     function line(a,b,color,width=1){if(!a||!b)return;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
     for(let z=5;z<=80;z+=5)line(p({x:-50,y:0,z}),p({x:50,y:0,z}),'#1d2b3d');
