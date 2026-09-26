@@ -20,6 +20,19 @@ The repository remains a sample-data rendering prototype. It is not ready to run
 
 Before implementing a real adapter, obtain and validate a data source that supplies timestamped entity IDs, team IDs, world positions, joint positions, and camera pose/projection. Confirm units, coordinate handedness, vertical versus horizontal FOV, joint ordering, update rate, and stale-data handling against a captured sample. Implementing an adapter without that evidence would require guessing.
 
-A documented developer interface or replay sample could resolve this. Otherwise, binary/runtime reverse engineering would be a separate investigation with uncertain feasibility; it has not been performed by this project. More rendering polish will not resolve the missing data source.
+A documented developer interface or replay sample could resolve this. The initial static binary inspection below did not establish a data source. Runtime reverse engineering has not been performed. More rendering polish will not resolve the missing data source.
 
 Only these observations are published. No local account settings, save files, binaries, or telemetry contents are included.
+
+## Initial static executable inspection
+
+The reproducible `tools/inspect_pe.py` script reads PE headers, standard import descriptors and a fixed list of ASCII/UTF-16LE markers without loading or executing the input. Reports are in `analysis/` and include SHA-256 hashes identifying the inspected files.
+
+- The shipping client is an x64 PE32+ executable with zero COFF symbol entries. Its standard import table lists only `coreinit.dll`.
+- `coreinit.dll` and `runtime.dll` are also x64 PE32+ files with zero COFF symbol entries.
+- None of the selected markers (including `PlayerCameraManager`, `SkeletalMeshComponent`, `GetBoneTransform`, and several guessed WD class names) appeared in the three files in either encoding. This is a bounded substring scan, not an exhaustive symbol or reflection analysis.
+- `runtime.dll` has sections named `packer0`, `packer1`, and other `packer` variants. Together with the limited client import table, this suggests a packing/loading layer. It does not establish the protection mechanism or the purpose of either DLL.
+
+No player, bone or camera layout was identified. A zero COFF symbol count does not rule out other debug metadata, and a missing plain-text marker does not rule out its corresponding functionality. Standard imports exclude delay imports and dynamically resolved dependencies.
+
+The next deeper technical stage would be disassembly and analysis of the loading layer. This scan does not supply offsets or a live-memory acquisition method. No unpacking, protection bypass, injection, or runtime attachment was attempted.

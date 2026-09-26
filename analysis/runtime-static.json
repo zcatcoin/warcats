@@ -1,0 +1,103 @@
+{
+  "filename": "runtime.dll",
+  "size": 71485336,
+  "sha256": "29a200a0ebc663b6595b29326e6cb44593e0d58722a87ef22ef71787a690d528",
+  "machine": "0x8664",
+  "pe_format": "PE32+",
+  "coff_symbol_count": 0,
+  "sections": [
+    {
+      "name": ".rdata",
+      "virtual_size": 4232,
+      "rva": 4096,
+      "raw_size": 4608,
+      "file_offset": 1024
+    },
+    {
+      "name": ".rodata",
+      "virtual_size": 33,
+      "rva": 12288,
+      "raw_size": 512,
+      "file_offset": 5632
+    },
+    {
+      "name": ".rwx",
+      "virtual_size": 4096,
+      "rva": 16384,
+      "raw_size": 4096,
+      "file_offset": 6144
+    },
+    {
+      "name": "packer0",
+      "virtual_size": 11141364,
+      "rva": 20480,
+      "raw_size": 11141632,
+      "file_offset": 10240
+    },
+    {
+      "name": "packer1",
+      "virtual_size": 3137313,
+      "rva": 11165696,
+      "raw_size": 3137536,
+      "file_offset": 11151872
+    },
+    {
+      "name": "packer2",
+      "virtual_size": 100804,
+      "rva": 14303232,
+      "raw_size": 29184,
+      "file_offset": 14289408
+    },
+    {
+      "name": ".rsrc",
+      "virtual_size": 12962192,
+      "rva": 14405632,
+      "raw_size": 12962304,
+      "file_offset": 14318592
+    },
+    {
+      "name": ".reloc",
+      "virtual_size": 2356,
+      "rva": 27369472,
+      "raw_size": 2560,
+      "file_offset": 27280896
+    },
+    {
+      "name": "packer30",
+      "virtual_size": 2124422,
+      "rva": 27373568,
+      "raw_size": 2124800,
+      "file_offset": 27283456
+    },
+    {
+      "name": "packer40",
+      "virtual_size": 553152,
+      "rva": 29499392,
+      "raw_size": 553472,
+      "file_offset": 29408256
+    },
+    {
+      "name": "packer31",
+      "virtual_size": 41169538,
+      "rva": 30056448,
+      "raw_size": 41169920,
+      "file_offset": 29961728
+    },
+    {
+      "name": "packer42",
+      "virtual_size": 341988,
+      "rva": 71229440,
+      "raw_size": 342016,
+      "file_offset": 71131648
+    }
+  ],
+  "imported_dlls": [
+    "WINHTTP.dll",
+    "ntdll.dll",
+    "KERNEL32.dll",
+    "USER32.dll",
+    "GDI32.dll"
+  ],
+  "marker_file_offsets": {},
+  "limitations": "Marker hits are substrings at file offsets, not verified symbols, object layouts or runtime addresses. Up to 8 hits per encoding. Absence does not prove a feature is absent."
+}

@@ -1,0 +1,60 @@
+{
+  "filename": "coreinit.dll",
+  "size": 47512,
+  "sha256": "7bd2802e0afbc258f816fdd086e49d6ce6b7684e18d21c53868a31bc794eb5eb",
+  "machine": "0x8664",
+  "pe_format": "PE32+",
+  "coff_symbol_count": 0,
+  "sections": [
+    {
+      "name": ".text",
+      "virtual_size": 11126,
+      "rva": 4096,
+      "raw_size": 11264,
+      "file_offset": 1024
+    },
+    {
+      "name": ".rdata",
+      "virtual_size": 20944,
+      "rva": 16384,
+      "raw_size": 20992,
+      "file_offset": 12288
+    },
+    {
+      "name": ".data",
+      "virtual_size": 452,
+      "rva": 40960,
+      "raw_size": 512,
+      "file_offset": 33280
+    },
+    {
+      "name": ".entry",
+      "virtual_size": 72,
+      "rva": 45056,
+      "raw_size": 512,
+      "file_offset": 33792
+    },
+    {
+      "name": ".rsrc",
+      "virtual_size": 904,
+      "rva": 49152,
+      "raw_size": 1024,
+      "file_offset": 34304
+    },
+    {
+      "name": ".reloc",
+      "virtual_size": 352,
+      "rva": 53248,
+      "raw_size": 512,
+      "file_offset": 35328
+    }
+  ],
+  "imported_dlls": [
+    "ntdll.dll",
+    "USER32.dll",
+    "GDI32.dll",
+    "ADVAPI32.dll"
+  ],
+  "marker_file_offsets": {},
+  "limitations": "Marker hits are substrings at file offsets, not verified symbols, object layouts or runtime addresses. Up to 8 hits per encoding. Absence does not prove a feature is absent."
+}
