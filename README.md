@@ -6,6 +6,8 @@ A dependency-free browser prototype for boxes, skeletons, team colours, and dist
 
 See [INVESTIGATION.md](INVESTIGATION.md) for verified local inspection findings and the unresolved integration requirements.
 
+The [SDK comparison](SDK-COMPARISON.md) distinguishes explicit declarations in the old and new dumps from inferred field mappings and explains why the live reader is still unverified.
+
 ## Recorded snapshot import
 
 Click **Export sample snapshot** for a valid example, then **Load JSON** to display it. Files stay in your browser; no upload or game connection occurs. Imported snapshots are static and use their own camera/FOV; sample animation and FOV controls resume with **Return to sample data**. Invalid imports retain the previous scene and display an error. Maximum file size is 16 MiB, with at most 256 entities per frame.
