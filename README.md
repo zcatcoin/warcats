@@ -2,6 +2,8 @@
 
 A dependency-free browser prototype for boxes, skeletons, team colours, and distance labels. Open `index.html` in a browser. Use the toggles, FOV slider and pause button to inspect the rendering.
 
+A [native Windows overlay](desktop/README.md) now accepts continuously updated snapshot files and follows a foreground game window. Build it with `desktop/build.ps1`. It has no game-data reader yet and shows no players without an external producer.
+
 **This is a sample-data renderer, not a working WARDOGS cheat.** It does not read the game, attach to processes, or obtain live player information.
 
 See [INVESTIGATION.md](INVESTIGATION.md) for verified local inspection findings and the unresolved integration requirements.
@@ -26,4 +28,4 @@ Run checks with `node --test tests/snapshot.test.js tests/recording.test.js`.
 
 `renderer.js` separates the sample provider from perspective projection and rendering. A future data adapter must supply world-space entity positions, joint positions, team IDs and camera data. The current coordinate convention is +Y up and +Z forward, with metres as units. FOV is vertical; yaw and pitch are radians. Skeleton joint ordering is defined by the sample provider and `links` array. Engine-specific coordinates and joint ordering must be converted by the adapter.
 
-Projection rejects points at or behind the near plane. Skeletons crossing that plane are currently skipped as a whole. Distance is measured from the camera to the entity origin. This prototype is a standalone scene, not a transparent desktop overlay.
+Projection rejects points at or behind the near plane. Skeletons crossing that plane are currently skipped as a whole. Distance is measured from the camera to the entity origin. This browser prototype is a standalone scene. The separate desktop application provides the transparent overlay.
