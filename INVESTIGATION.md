@@ -36,3 +36,12 @@ The reproducible `tools/inspect_pe.py` script reads PE headers, standard import 
 No player, bone or camera layout was identified. A zero COFF symbol count does not rule out other debug metadata, and a missing plain-text marker does not rule out its corresponding functionality. Standard imports exclude delay imports and dynamically resolved dependencies.
 
 The next deeper technical stage would be disassembly and analysis of the loading layer. This scan does not supply offsets or a live-memory acquisition method. No unpacking, protection bypass, injection, or runtime attachment was attempted.
+# Runtime check — 2026-10-02
+
+The user confirmed the native overlay status text is visible over the windowed game. This verifies visibility, not entity projection or click-through behavior.
+
+The running executable now reports `++Wardogs+Live-CL-507060`, matching the supplied archive's build label. Earlier references below to installed build 501228 are historical. Matching labels do not independently verify generated field layouts.
+
+A normal Windows query/read handle opened successfully. `QueryFullProcessImageName` returned the expected game executable. `EnumProcessModulesEx` failed with Win32 error 5 (Access denied), so this check did not locate the main module or successfully read any game memory. This does not establish the cause of the denial or prove every acquisition method impossible. No live entity/camera reader has been implemented.
+
+Repeat using `tools/probe-game.ps1` in a desktop PowerShell session. It reports API errors separately and attempts only a two-byte executable signature read if module enumeration succeeds. It does not change process memory, request debug privileges or install a driver.
