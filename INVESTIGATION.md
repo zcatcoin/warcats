@@ -38,6 +38,10 @@ No player, bone or camera layout was identified. A zero COFF symbol count does n
 The next deeper technical stage would be disassembly and analysis of the loading layer. This scan does not supply offsets or a live-memory acquisition method. No unpacking, protection bypass, injection, or runtime attachment was attempted.
 # Runtime check — 2026-10-02
 
+Follow-up: checked actual handle permissions using `NtQueryObject(ObjectBasicInformation)`. Both probes requested `0x0410` (query information and memory read). The self-test received `0x1410`, enumerated modules and read the executable `MZ` signature successfully. WARDOGS received `0x1400`: query access was present, but `PROCESS_VM_READ` (`0x0010`) was absent. Module enumeration again failed with error 5. This establishes that the returned game handle lacks read permission, rather than merely suggesting a module-enumeration implementation error. It does not identify which component removed the requested permission. No protection changes or bypass were attempted.
+
+`tools/probe-game.ps1 -SelfTest` now provides the control check; normal mode reports requested versus granted rights and an explicit outcome. SDK offset changes cannot confer missing handle permissions.
+
 The user confirmed the native overlay status text is visible over the windowed game. This verifies visibility, not entity projection or click-through behavior.
 
 The running executable now reports `++Wardogs+Live-CL-507060`, matching the supplied archive's build label. Earlier references below to installed build 501228 are historical. Matching labels do not independently verify generated field layouts.
